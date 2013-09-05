@@ -10,11 +10,10 @@ require_once($_SERVER['DOCUMENT_ROOT']."/includes/class.connection.php");
 	private $db;
 
 	function __construct($data){
-		print_r($data);
 		$this->db		= new DB();
 		$this->device	= $data['DEVICE'];
-		$this->item		= $data['ITEM'];
-		$this->value	= $data['VALUE'];
+		$this->item		= $data['RECORDS']['ITEM'];
+		$this->value	= $data['RECORDS']['VALUE'];
 		$this->save();
 	}
 

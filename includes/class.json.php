@@ -1,5 +1,4 @@
 <?php
-require_once($_SERVER['DOCUMENT_ROOT'].'/includes/class.db.php');
 require_once($_SERVER['DOCUMENT_ROOT'].'/includes/class.system.php');
 
 class Json {
@@ -7,8 +6,8 @@ class Json {
   private $input = array();
 
   function __construct($input) {
-        //System::rawJsonLog("INPUT:".$input);
         $this->input = json_decode($input,TRUE);
+		System::addLog($input,LOG_INFO);
   }
 
   function getArray(){
