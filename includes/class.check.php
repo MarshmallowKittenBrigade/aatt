@@ -11,16 +11,24 @@ require_once($_SERVER['DOCUMENT_ROOT']."/includes/class.connection.php");
 	private $db;
 
 	function __construct($data){
+		if(!$data['DEVICE'] || !$data['CHECKS']){
+			return false;
+		}
 		$this->db		= new DB();
 		$this->device	= $data['DEVICE'];
-		$this->item		= $data['ITEM'];;
-		$this->save();
+		$this->checks	= $data['CHECKS'];
 	}
 
 	function save(){
-		$sql = "SELECT * FROM actions WHERE device_id='".$this->device."' AND item='".$this->item."'";
-		return $db->db_query_result($sql);;
-	}	
+		foreach($this->checks as $item){
+			$sql = "SELECT * FROM actions WHERE device_id='".$this->device."' AND item_id='".$item."'";
+			$result = $this->db->db_query_row($sql);
+			$actions[$item] = $result['action'];
+		}
+		$response['STATUS'] = 'SUCCESS';
+		$response['RESPONSE'] = $actions;
+		return $response;
+	}
 
  }
 

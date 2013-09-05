@@ -12,21 +12,25 @@ require_once($_SERVER['DOCUMENT_ROOT']."/includes/class.connection.php");
 	function __construct($data){
 		$this->db		= new DB();
 		$this->device	= $data['DEVICE'];
-		$this->item		= $data['RECORDS']['ITEM'];
-		$this->value	= $data['RECORDS']['VALUE'];
-		$this->save();
+		$this->records	= $data['RECORDS'];
 	}
 
 	function save(){
+		$tmp = '';
 		$cols = "device_id,item_id,value,inserted";
-		$vals = "'".$this->device . "','" . $this->item . "','" . $this->value . "',NOW()";
+		foreach ($this->records as $item=>$value){
+			$tmp .="('$this->device','$item','$value',NOW()),";
+		}
+		$vals = substr($tmp,0,-1);
 		$rows = $this->db->db_ins("records",$cols,$vals);
 		if($rows>0){
-			$this->status = true;
+			$response['STATUS'] = 'SUCCESS';
+			$response['RESPONSE']['RECORDED'] = $rows;
 		}else{
-			$this->status = false;
+			$response['STATUS'] = 'FAIL';
+			$response['RESPONSE'] = 'NOTRECORDED';
 		}
-		return $this->status;
+		return $response;
 	}	
 
  }

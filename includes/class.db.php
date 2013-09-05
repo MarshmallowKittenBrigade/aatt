@@ -20,7 +20,9 @@ class DB{
 	}
 
 	function connect(){
+		$err_level = error_reporting(0);
         $this->res = mysql_connect($this->host, $this->username, $this->password) or die(mysql_error());
+		error_reporting($err_level);
         mysql_select_db($this->database) or die(mysql_error());
         return $this->res;
     }
@@ -41,7 +43,7 @@ class DB{
 
 	function db_ins($table,$cols,$vals){
 		$connect = $this->connect();
-		$sql = "INSERT INTO $table ($cols) VALUES ($vals)";
+		$sql = "INSERT INTO $table ($cols) VALUES $vals";
 		$result = mysql_query($sql,$connect);
 		return mysql_affected_rows($connect);
 	}

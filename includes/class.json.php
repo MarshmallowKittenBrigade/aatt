@@ -7,7 +7,6 @@ class Json {
 
   function __construct($input) {
         $this->input = json_decode($input,TRUE);
-		System::addLog($input,LOG_INFO);
   }
 
   function getArray(){

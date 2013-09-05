@@ -22,10 +22,12 @@ if(isset($auth['AUTH']) && $auth['AUTH'] == 'KEYNOTEXIST'){
  $connection->establish();
  switch ($json->getAction()){
 	case 'RECORD':
-	 $data = new Record($json->getData());
+	 $rec = new Record($json->getData());
+	 $data = $rec->save();
 	 break;
 	case 'CHECK':
-	 $data = new Check($json->getData());
+	 $chk = new Check($json->getData());
+	 $data = $chk->save();
 	 break;
 	default:
 	 $data['STATUS'] = 'FAIL';
@@ -38,7 +40,7 @@ die();
 
 function output($action,$return,$starttime){
     print json_encode($return);
-    System::addLog($action." - ".(microtime(true)-$starttime),LOG_INFO);
+    System::addLog($action.":".(microtime(true)-$starttime),LOG_INFO);
 }
 
 ?>
