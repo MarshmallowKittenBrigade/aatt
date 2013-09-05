@@ -8,19 +8,21 @@ class Connection {
   private $app;
   private $account_code;
   private $account_key;
-  private $mysql;
+  private $db;
 
   function __construct($creds){
     $this->app = $creds['APP'];
     $this->account_code = $creds['ACCOUNT'];
 	$this->account_key = md5($creds['KEY']."phoolsalt");
-    $this->mysql = new DB();;
+    $this->db = new DB();;
   }
 
   function establish() {
-    if($this->app == APPNAME){
+	$sql = "select count(*) as apps from apps where app_name='$this->app'";
+	$result = $this->db->db_query_result($sql);
+    if($result['apps'] > 0){
         $query = 'select count(*) from accounts where account_code="'.$this->account_code.'" AND account_key="'.$this->account_key.'"';
-        $result = $this->mysql->db_query_result($query);
+        $result = $this->db->db_query_result($query);
         if($result > 0){
             $return['STATUS'] = "SUCCESS";
             $return['RESPONSE'] = "AUTHORIZED";
