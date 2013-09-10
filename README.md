@@ -1,7 +1,7 @@
 aatt
 ====
 
-Automate All The Things
+Automate All The Things<br />
 This is a very, very early version of this software.  Use at your own risk.
 
 Installation
