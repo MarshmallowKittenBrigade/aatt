@@ -24,13 +24,13 @@ CREATE DATABASE /*!32312 IF NOT EXISTS*/ `aatt` /*!40100 DEFAULT CHARACTER SET l
 USE `aatt`;
 
 --
--- Table structure for table `accounts`
+-- Table structure for table `account`
 --
 
-DROP TABLE IF EXISTS `accounts`;
+DROP TABLE IF EXISTS `account`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `accounts` (
+CREATE TABLE `account` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `account_code` varchar(64) NOT NULL,
   `account_key` varchar(64) NOT NULL,
@@ -41,31 +41,13 @@ CREATE TABLE `accounts` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `actions`
+-- Table structure for table `app`
 --
 
-DROP TABLE IF EXISTS `actions`;
+DROP TABLE IF EXISTS `app`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `actions` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `device_id` bigint(20) NOT NULL,
-  `item_id` bigint(20) NOT NULL,
-  `action` varchar(64) NOT NULL,
-  `completed` tinyint(4) NOT NULL DEFAULT '0',
-  `inserted` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `apps`
---
-
-DROP TABLE IF EXISTS `apps`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `apps` (
+CREATE TABLE `app` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `app_name` varchar(32) NOT NULL,
   `description` varchar(128) DEFAULT NULL,
@@ -76,13 +58,31 @@ CREATE TABLE `apps` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `devices`
+-- Table structure for table `attribute`
 --
 
-DROP TABLE IF EXISTS `devices`;
+DROP TABLE IF EXISTS `attribute`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `devices` (
+CREATE TABLE `attribute` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(64) NOT NULL,
+  `description` varchar(128) DEFAULT NULL,
+  `endpoint_id` bigint(20) NOT NULL,
+  `created` datetime NOT NULL,
+  `updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `device`
+--
+
+DROP TABLE IF EXISTS `device`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `device` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `name` varchar(64) NOT NULL,
   `description` varchar(128) DEFAULT NULL,
@@ -94,31 +94,34 @@ CREATE TABLE `devices` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `items`
+-- Table structure for table `endpoint`
 --
 
-DROP TABLE IF EXISTS `items`;
+DROP TABLE IF EXISTS `endpoint`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `items` (
+CREATE TABLE `endpoint` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `name` varchar(64) NOT NULL,
   `description` varchar(128) DEFAULT NULL,
+  `collector` tinyint(4) NOT NULL DEFAULT '0',
+  `controller` tinyint(4) NOT NULL DEFAULT '0',
+  `enabled` tinyint(4) NOT NULL DEFAULT '0',
   `device_id` bigint(20) NOT NULL,
   `created` datetime NOT NULL,
   `updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `records`
+-- Table structure for table `record`
 --
 
-DROP TABLE IF EXISTS `records`;
+DROP TABLE IF EXISTS `record`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `records` (
+CREATE TABLE `record` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `device_id` bigint(20) NOT NULL,
   `item_id` bigint(20) NOT NULL,
@@ -126,6 +129,46 @@ CREATE TABLE `records` (
   `inserted` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `relationship`
+--
+
+DROP TABLE IF EXISTS `relationship`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `relationship` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `device_1` bigint(20) NOT NULL,
+  `endpoint_1` bigint(20) NOT NULL,
+  `device_2` bigint(20) NOT NULL,
+  `endpoint_2` bigint(20) NOT NULL,
+  `r` tinyint(4) NOT NULL DEFAULT '0',
+  `w` tinyint(4) NOT NULL DEFAULT '0',
+  `e` tinyint(4) NOT NULL DEFAULT '0',
+  `created` datetime NOT NULL,
+  `updated` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `state`
+--
+
+DROP TABLE IF EXISTS `state`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `state` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `attribute_id` bigint(20) NOT NULL,
+  `current` varchar(32) NOT NULL,
+  `previous` varchar(32) NOT NULL,
+  `checked` datetime NOT NULL,
+  `updated` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -137,4 +180,4 @@ CREATE TABLE `records` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2013-09-05 16:29:24
+-- Dump completed on 2013-09-10 13:22:50
