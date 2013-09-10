@@ -18,10 +18,10 @@ class Connection {
   }
 
   function establish() {
-	$sql = "select count(*) as apps from apps where app_name='$this->app'";
+	$sql = "select count(*) as apps from app where app_name='$this->app'";
 	$result = $this->db->db_query_result($sql);
     if($result['apps'] > 0){
-        $query = 'select count(*) from accounts where account_code="'.$this->account_code.'" AND account_key="'.$this->account_key.'"';
+        $query = 'select count(*) from account where account_code="'.$this->account_code.'" AND account_key="'.$this->account_key.'"';
         $result = $this->db->db_query_result($query);
         if($result > 0){
             $return['STATUS'] = "SUCCESS";

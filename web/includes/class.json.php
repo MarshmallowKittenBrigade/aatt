@@ -42,7 +42,7 @@ class Json {
       return $this->getArrayByKey('DATA');
   }
 
-  function getAction(){
+  function getAct(){
       return $this->getValueByKey('ACT');
   }
 

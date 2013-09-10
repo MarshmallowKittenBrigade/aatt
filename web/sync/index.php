@@ -13,14 +13,14 @@ $return = array();
 $raw_post = file_get_contents('php://input');
 $json = new Json($raw_post);
 $auth = $json->getAuth();
-
+echo "\n$raw_post\n\n";
 if(isset($auth['AUTH']) && $auth['AUTH'] == 'KEYNOTEXIST'){
  $data['STATUS'] = 'FAIL';
  $data['RESPONSE'] = 'NOTAUTHORIZED';
 }else{
  $connection = new Connection($auth);
  $connection->establish();
- switch ($json->getAction()){
+ switch ($json->getAct()){
 	case 'RECORD':
 	 $rec = new Record($json->getData());
 	 $data = $rec->save();
@@ -35,7 +35,7 @@ if(isset($auth['AUTH']) && $auth['AUTH'] == 'KEYNOTEXIST'){
 	 break;
  }
 }
-output($json->getAction(),$data,$starttime);
+output($json->getAct(),$data,$starttime);
 die();
 
 function output($action,$return,$starttime){

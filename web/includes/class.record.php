@@ -22,7 +22,7 @@ require_once($_SERVER['DOCUMENT_ROOT']."/includes/class.connection.php");
 			$tmp .="('$this->device','$item','$value',NOW()),";
 		}
 		$vals = substr($tmp,0,-1);
-		$rows = $this->db->db_ins("records",$cols,$vals);
+		$rows = $this->db->db_ins("record",$cols,$vals);
 		if($rows>0){
 			$response['STATUS'] = 'SUCCESS';
 			$response['RESPONSE']['RECORDED'] = $rows;

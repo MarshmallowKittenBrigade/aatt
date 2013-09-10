@@ -20,10 +20,12 @@ require_once($_SERVER['DOCUMENT_ROOT']."/includes/class.connection.php");
 	}
 
 	function save(){
-		foreach($this->checks as $item){
-			$sql = "SELECT * FROM actions WHERE device_id='".$this->device."' AND item_id='".$item."'";
-			$result = $this->db->db_query_row($sql);
-			$actions[$item] = $result['action'];
+		foreach($this->checks as $endpoint=>$attributes){
+			foreach($attributes as $attribute){
+				$sql = "SELECT * FROM state s join attribute a on s.attribute_id=a.id WHERE attribute_id='".$attribute."' AND endpoint_id='".$endpoint."'";
+				$result = $this->db->db_query_row($sql);
+				$actions[$endpoint][$attribute] = $result['current'];
+			}
 		}
 		$response['STATUS'] = 'SUCCESS';
 		$response['RESPONSE'] = $actions;
