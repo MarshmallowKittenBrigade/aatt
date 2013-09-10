@@ -2,6 +2,11 @@ aatt
 ====
 
 Automate All The Things
+This is a very, very early version of this software.  Use at your own risk.
+
+Installation
+------------
+To install the aatt web service, simply place the contents of the web directory into the root of your web server (or a virtualhost).  Run the sql from the db dir to create the database then create a database user.  Update includes/aatt_config.php to use your database credentials and voila!  Then you can either grab one of the client libraries or access the API directly.
 
 Sample JSON
 -----------
