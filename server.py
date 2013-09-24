@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from lib import Aatt, System
-import sys, getopt, MySQLdb, ConfigParser, syslog, socket, time
+import sys, getopt, socket, time
 
 
 def main(argv):

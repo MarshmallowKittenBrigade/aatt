@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import json, sys, getopt, MySQLdb, ConfigParser, hashlib
+import json, sys, MySQLdb, hashlib
 from lib import System
 
 class Processor:
