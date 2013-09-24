@@ -1,84 +1,86 @@
+#!/bin/bash
+#
+# aattd	Startup script for the Automate All The Things Server
+#
+# chkconfig: - 
+# description: The Automate All The Things server is a central location for aatt endpoint reporting and state tracking
+# processname: aattd
+# config: /opt/aatt/etc/config.ini
+# pidfile: /var/run/aatt/aattd.pid
+#
 ### BEGIN INIT INFO
-# Provides:          aatt
-# Required-Start:    mysql
-# Required-Stop:     
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: This is the aatt server
-# Description:       aatt server for tracking aatt foo
+# Provides: aattd
+# Required-Start: mysql $network
+# Required-Stop:
+# Short-Description: aattd server
+# Description: Automate All The Things Server Daemon
 ### END INIT INFO
 
-# Using the lsb functions to perform the operations.
-. /lib/lsb/init-functions
-# Process name ( For display )
-NAME=aatt
-# Daemon name, where is the actual executable
-DAEMON=/opt/aatt/server.py
-# pid file for the daemon
-PIDFILE=/var/run/aatt.pid
+# Source function library
+. /etc/rc.d/init.d/functions
 
-# If the daemon is not there, then exit.
-test -x $DAEMON || exit 5
+INITLOG_ARGS=""
 
-case $1 in
- start)
-  # Checked the PID file exists and check the actual status of process
-  if [ -e $PIDFILE ]; then
-   status_of_proc -p $PIDFILE $DAEMON "$NAME process" && status="0" || status="$?"
-   # If the status is SUCCESS then don't need to start again.
-   if [ $status = "0" ]; then
-    exit # Exit
-   fi
-  fi
-  # Start the daemon.
-  log_daemon_msg "Starting the process" "$NAME"
-  # Start the daemon with the help of start-stop-daemon
-  # Log the message appropriately
-  if start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --exec $DAEMON ; then
-   log_end_msg 0
-  else
-   log_end_msg 1
-  fi
-  ;;
- stop)
-  # Stop the daemon.
-  if [ -e $PIDFILE ]; then
-   status_of_proc -p $PIDFILE $DAEMON "Stoppping the $NAME process" && status="0" || status="$?"
-   if [ "$status" = 0 ]; then
-    start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
-    /bin/rm -rf $PIDFILE
-   fi
-  else
-   log_daemon_msg "$NAME process is not running"
-   log_end_msg 0
-  fi
-  ;;
- restart)
-  # Restart the daemon.
-  $0 stop && sleep 2 && $0 start
-  ;;
- status)
-  # Check the status of the process.
-  if [ -e $PIDFILE ]; then
-   status_of_proc -p $PIDFILE $DAEMON "$NAME process" && exit 0 || exit $?
-  else
-   log_daemon_msg "$NAME Process is not running"
-   log_end_msg 0
-  fi
-  ;;
- reload)
-  # Reload the process. Basically sending some signal to a daemon to reload
-  # it configurations.
-  if [ -e $PIDFILE ]; then
-   start-stop-daemon --stop --signal USR1 --quiet --pidfile $PIDFILE --name $NAME
-   log_success_msg "$NAME process reloaded successfully"
-  else
-   log_failure_msg "$PIDFILE does not exists"
-  fi
-  ;;
- *)
-  # For invalid arguments, print the usage message.
-  echo "Usage: $0 {start|stop|restart|reload|status}"
-  exit 2
-  ;;
+aattd=/opt/aatt/server.py
+prog=aattd
+pidfile=/var/run/aatt/aattd.pid
+lockfile=/var/lock/subsys/aattd
+RETVAL=0
+
+start() {
+		echo -n $"Starting $prog: "
+		$aattd &
+		RETVAL=$?
+		echo
+		[ $RETVAL = 0 ] && touch ${lockfile}
+		return $RETVAL
+	}
+
+stop() {
+		echo -n $"Stopping $prog: "
+		killproc $aattd
+		RETVAL=$?
+		echo
+		[ $RETVAL = 0 ] && rm -f ${lockfile} ${pidfile}
+	}
+
+reload() {
+    echo -n $"Reloading $prog: "
+    if ! $aattd $OPTIONS -t >&/dev/null; then
+        RETVAL=6
+        echo $"not reloading due to configuration syntax error"
+        failure $"not reloading $httpd due to configuration syntax error"
+    else
+        # Force LSB behaviour from killproc
+        LSB=1 killproc -p ${pidfile} $aattd -HUP
+        RETVAL=$?
+        if [ $RETVAL -eq 7 ]; then
+            failure $"aattd shutdown"
+        fi
+    fi
+    echo
+}
+
+# See how we were called.
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+        status -p ${pidfile} $aattd
+    RETVAL=$?
+    ;;
+  restart)
+    stop
+    start
+    ;;
+  *)
+    echo $"Usage: $prog {start|stop|restart|status}"
+    RETVAL=2
 esac
+
+exit $RETVAL
+
