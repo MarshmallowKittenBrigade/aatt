@@ -26,7 +26,7 @@ class Processor:
 		except:
 			self.response["STATUS"] = "FAIL"
 			self.response["RESPONSE"] = "BADJSON"
-			self.aattlog.log(json.dumps(self.response))
+			self.aattlog.log("WARNING: STATUS %s RESPONSE %s" % (self.response["STATUS"],self.response["RESPONSE"]))
 
 	def getRaw(self):
 		return json.dumps(self.raw).encode("utf-8")
@@ -53,16 +53,18 @@ class Processor:
 			except:
 				self.response["STATUS"] = "FAIL"
 				self.response["RESPONSE"] = "KEYNOTEXIST"
-				self.aattlog.log(json.dumps(self.response))
+				self.aattlog.log("WARNING: STATUS %s RESPONSE %s" % (self.response["STATUS"],self.response["RESPONSE"]))
 	
 	def record(self,deviceId,endpointId,value):
 		c = self.db.cursor(MySQLdb.cursors.DictCursor)
 		sql = "INSERT INTO endpoint_data (device_id,endpoint_id,value) VALUES('"+deviceId+"','"+endpointId+"','"+value+"')"
 		try:
 			c.execute(sql)
+			self.aattlog.log("INFO: Added data for endpoint %i" % (endpointId))
 		except:
 			self.db.rollback()
 			c.close()
+			self.aattlog.log("ERROR: %s" % (e))
 			return False
 		self.db.commit()
 		c.close()
@@ -82,9 +84,11 @@ class Processor:
 		sql = "INSERT INTO state (attribute_id,new) VALUES ('%d','%s') ON DUPLICATE KEY UPDATE set new='%s'" % (attributeId,state,state)
 		try:
 			c.execute(sql)
+			self.aattlog.log("INFO: Added new state request for attribute %i" % (attributeId))
 		except:
 			self.db.rollback()
 			c.close()
+			self.aattlog.log("ERROR: %s" % (e))
 			return False
 		self.db.commit()
 		c.close()
@@ -95,9 +99,11 @@ class Processor:
 		sql = "INSERT INTO state (attribute_id,current) VALUES ('%d','%s') ON DUPLICATE KEY UPDATE set current='%s'" % (attributeId,state,state)
 		try:
 			c.execute(sql)
+			self.aattlog.log("INFO: Updated current state for attribute %i" % (attributeId))
 		except:
 			self.db.rollback()
 			c.close()
+			self.aattlog.log("ERROR: %s" % (e))
 			return False
 		self.db.commit()
 		c.close()
@@ -128,8 +134,10 @@ class Processor:
 							state[endpoint][attribute] = "ATTNOTEXIST"
 				if not state:
 					self.response = {"STATUS":"FAIL","RESPONSE":"EPNOTEXIST"}
+					self.aattlog.log("WARNING: Endpoint does not exist")
 				else:
 					self.response = {"STATUS":"SUCCESS","RESPONSE":state}
+					self.aattlog.log("INFO: Successfully returned results of check")
 		elif(foo.login() == False):
 			self.response = {"STATUS":"FAIL","RESPONSE":"AUTHFAIL"}
 		return json.dumps(self.response)
@@ -167,10 +175,10 @@ class Auth:
 			accts = c.fetchone()
 			c.close()
 		except:
-			self.aattlog.log("Authentication query failed: ")
+			self.aattlog.log("WARNING: Authentication query failed: ")
 			return False
 		if(int(accts['foo']) > 0):
-			self.aattlog.log("Login Sucessful")
+			self.aattlog.log("INFO: Login Sucessful")
 			return True
 		else:
 			return False

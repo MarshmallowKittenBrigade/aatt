@@ -30,13 +30,13 @@ def main(argv):
 		if opt is "--debug":
 			debug = True
 	
-	aattlog.log("Starting server on port " + str(cfg['port']))
+	aattlog.log("INFO: Starting server on port " + str(cfg['port']))
 	
 	while 1:
 		client, address = sock.accept()
 
 		start = int(round(time.time() * 1000))
-		aattlog.log("Connection from %s" % (str(address)))
+		aattlog.log("INFO: Connection from %s" % (str(address)))
 		data = client.recv(size)
 		if data:
 			aatt = Aatt.Processor(data)
@@ -44,6 +44,7 @@ def main(argv):
 			duration = (int(round(time.time() * 1000))) - start
 			aattlog.log("STATS: Process Time - %i ms" % (duration))
 		client.close()
+		aattlog.log("INFO: Closed connection from %s" % (str(address)))
 
 if __name__ == "__main__":
 	main(sys.argv[1:])
