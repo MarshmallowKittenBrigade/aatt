@@ -29,6 +29,14 @@ class Config:
 		self.configs['dbuser']			= config.get("db","user")
 		self.configs['dbpass']			= config.get("db","password")
 		self.configs['dbname']			= config.get("db","name")
+		self.configs['ssl_enable']		= config.get("ssl","ssl_enable")
+		self.configs['certfile']		= config.get("ssl","certfile")
+		self.configs['keyfile']			= config.get("ssl","keyfile")
 
 	def getConfig(self):
 		return self.configs
+
+class Database:
+
+	def __init__(self):
+		db = ""

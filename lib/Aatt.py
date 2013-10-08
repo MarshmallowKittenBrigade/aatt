@@ -17,15 +17,16 @@ class Processor:
 		config = System.Config('/opt/aatt/etc/config.ini')
 		cfg = config.getConfig()
 
-		self.meh = System.Log(cfg['syslogHost'],cfg['syslogFacility'],cfg['syslogName'])
+		self.aattlog = System.Log(cfg['syslogHost'],cfg['syslogFacility'],cfg['syslogName'])
 
 		self.db = MySQLdb.connect(host=cfg['dbhost'],user=cfg['dbuser'],passwd=cfg['dbpass'],db=cfg['dbname'])
+		self.checker = Validator(sent)
 		try:
-			self.raw = json.loads(sent)
+			self.checker.validate()
 		except:
 			self.response["STATUS"] = "FAIL"
 			self.response["RESPONSE"] = "BADJSON"
-			self.meh.log(json.dumps(self.response))
+			self.aattlog.log(json.dumps(self.response))
 
 	def getRaw(self):
 		return json.dumps(self.raw).encode("utf-8")
@@ -52,9 +53,9 @@ class Processor:
 			except:
 				self.response["STATUS"] = "FAIL"
 				self.response["RESPONSE"] = "KEYNOTEXIST"
-				self.meh.log(json.dumps(self.response))
+				self.aattlog.log(json.dumps(self.response))
 	
-	def add(self,deviceId,endpointId,value):
+	def record(self,deviceId,endpointId,value):
 		c = self.db.cursor(MySQLdb.cursors.DictCursor)
 		sql = "INSERT INTO endpoint_data (device_id,endpoint_id,value) VALUES('"+deviceId+"','"+endpointId+"','"+value+"')"
 		try:
@@ -69,7 +70,7 @@ class Processor:
 
 	def check(self,attributeId):
 		c = self.db.cursor(MySQLdb.cursors.DictCursor)
-		sql = "SELECT current,previous FROM state WHERE attribute_id='%s'" %(attributeId)
+		sql = "SELECT new FROM state WHERE attribute_id='%s'" %(attributeId)
 		c.execute(sql)
 		results = c.fetchall()
 		for value in results:
@@ -81,11 +82,11 @@ class Processor:
 		foo = Auth(self.auth)
 		if(foo.login() == True):
 			rowcount = 0
-			self.meh.log("ACT: %s" % self.act)
+			self.aattlog.log("ACT: %s" % self.act)
 			if self.act == "RECORD":
 				self.records = self.data["RECORDS"]
 				for endpoint in self.records:
-					self.add(self.device,endpoint,self.records[endpoint])
+					self.record(self.device,endpoint,self.records[endpoint])
 					rowcount += 1
 				self.response = {"STATUS":"SUCCESS","RESPONSE":{"RECORDED":rowcount}}
 			elif self.act == "CHECK":
@@ -126,7 +127,7 @@ class Auth:
 		config = System.Config('/opt/aatt/etc/config.ini')
 		cfg = config.getConfig()
 
-		self.meh = System.Log(cfg['syslogHost'],cfg['syslogFacility'],cfg['syslogName'])
+		self.aattlog = System.Log(cfg['syslogHost'],cfg['syslogFacility'],cfg['syslogName'])
 
 		self.db = MySQLdb.connect(host=cfg['dbhost'],user=cfg['dbuser'],passwd=cfg['dbpass'],db=cfg['dbname'])
 
@@ -140,10 +141,43 @@ class Auth:
 			accts = c.fetchone()
 			c.close()
 		except:
-			self.meh.log("Authentication query failed: ")
+			self.aattlog.log("Authentication query failed: ")
 			return False
 		if(int(accts['foo']) > 0):
-			self.meh.log("Login Sucessful")
+			self.aattlog.log("Login Sucessful")
 			return True
 		else:
 			return False
+
+class Validator:
+
+	def __init__(self,json):
+		self.json = json
+
+	def json(self):
+		try:
+			json.loads(self.json)
+			return True
+		except:
+			return False
+
+	def jsonValidKey(self,key):
+		keys = ["AUTH","ACT","DATA","ACCOUNT","KEY","APP","RECORDS","CHECKS","SET"]
+		if key in keys:
+			return True
+		else:
+			return False
+
+	def validate(self):
+		try:
+			self.json()
+		except:
+			return e
+
+		#try:
+		#	for key in self.json:
+		#		if not self.jsonValidKey(key):
+		#			return False
+
+
+

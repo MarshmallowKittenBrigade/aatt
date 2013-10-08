@@ -1,14 +1,14 @@
 #!/usr/bin/python
 
 from lib import Aatt, System
-import sys, getopt, socket, time
+import sys, getopt, socket, ssl, time
 
 
 def main(argv):
 	config = System.Config('/opt/aatt/etc/config.ini')
 	cfg = config.getConfig()
 	
-	meh = System.Log(cfg['syslogHost'],cfg['syslogFacility'],cfg['syslogName'])
+	aattlog = System.Log(cfg['syslogHost'],cfg['syslogFacility'],cfg['syslogName'])
 
 	host = ''
 	port = cfg['port']
@@ -30,19 +30,20 @@ def main(argv):
 		if opt is "--debug":
 			debug = True
 	
-	meh.log("Starting server on port " + str(cfg['port']))
+	aattlog.log("Starting server on port " + str(cfg['port']))
 	
 	while 1:
 		client, address = sock.accept()
+
 		start = int(round(time.time() * 1000))
-		meh.log("Connection from %s" % (str(address)))
+		aattlog.log("Connection from %s" % (str(address)))
 		data = client.recv(size)
 		if data:
 			aatt = Aatt.Processor(data)
 			client.send(aatt.process())
-			client.close()
 			duration = (int(round(time.time() * 1000))) - start
-			meh.log("STATS: Process Time - %i ms" % (duration))
+			aattlog.log("STATS: Process Time - %i ms" % (duration))
+		client.close()
 
 if __name__ == "__main__":
 	main(sys.argv[1:])

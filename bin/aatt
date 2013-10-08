@@ -1,0 +1,112 @@
+#!/usr/bin/python
+
+"""
+Automate All The Things Command Line Tool
+	Can be used for registration and deletion of accounts, devices, endpoints, and attributes
+@author DoriftoShoes
+@date 2013-09-30
+@version 0.1a
+"""
+
+import os, sys,inspect, getpass, getopt, MySQLdb, ConfigParser, hashlib
+
+sys.path.insert(0,os.path.dirname(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))))
+
+from lib import Aatt, System
+
+def main(argv):
+	config = System.Config('/opt/aatt/etc/config.ini')
+	cfg = config.getConfig()
+
+	aattlog = System.Log(cfg['syslogHost'],cfg['syslogFacility'],cfg['syslogName'])
+
+	db = MySQLdb.connect(host=cfg['dbhost'],user=cfg['dbuser'],passwd=cfg['dbpass'],db=cfg['dbname'])
+
+	print "Print Welcome to the Automate All The Things Command Line Toolset!"
+	#print "CREDENTIALS"
+	#username = raw_input("Account Code: ")
+	#password = getpass.getpass("Account Key:  ")
+
+	type	= argv[0]
+	action	= argv[1]
+	print argv
+	if type == "account":
+		if action == "add":
+			added = addAccount()
+			if added:
+				print "Successfully added account\n";
+			else:
+				print "Failed to add account\n";
+		elif action == "list":
+			list("account")
+	
+		else:
+			status = "FAIL"
+
+	elif type == "device":
+		if action == "add":
+			addDevice()
+		elif action == "list":
+			list("device")
+		else:
+			status = "FAIL"
+
+def addAccount():
+	config = System.Config('/opt/aatt/etc/config.ini')
+	cfg = config.getConfig()
+	aattlog = System.Log(cfg['syslogHost'],cfg['syslogFacility'],cfg['syslogName'])
+
+	db = MySQLdb.connect(host=cfg['dbhost'],user=cfg['dbuser'],passwd=cfg['dbpass'],db=cfg['dbname'])
+	
+	newacct = raw_input("New Account Code: ")
+	newkey	= getpass.getpass("Account Key: ")
+	newkey2	= getpass.getpass("Verify Key: ")
+	if newkey != newkey2:
+		print "Passwords did not match."
+		sys.exit(1)
+	else:
+		saltedpass = hashlib.md5(newkey + "phoolsalt").hexdigest()
+
+	c = db.cursor(MySQLdb.cursors.DictCursor)
+	sql = "INSERT INTO account (account_code,account_key,created) VALUES('"+newacct+"','"+saltedpass+"',NOW())"
+	try:
+		c.execute(sql)
+	except:
+		db.rollback()
+		c.close()
+		return False
+	db.commit()
+	c.close()
+	return True
+	
+def addDevice():
+	config = System.Config('/opt/aatt/etc/config.ini')
+	cfg = config.getConfig()
+	aattlog = System.Log(cfg['syslogHost'],cfg['syslogFacility'],cfg['syslogName'])
+
+	db = MySQLdb.connect(host=cfg['dbhost'],user=cfg['dbuser'],passwd=cfg['dbpass'],db=cfg['dbname'])
+
+	acctcode = raw_input("Account Code: ")
+	key = getpass.getpass("Key: ")
+	saltedkey = hashlib.md5(key + "phoolsalt").hexdigest()
+
+	c = db.cursor(MySQLdb.cursors.DictCursor)
+	sql = "SELECT id FROM account WHERE account_code='"+acctcode+"' AND account_key='"+saltedkey+"'"
+	c.execute(sql)
+	results = c.fetchone()
+	auth = results['id']
+	print auth
+	if not auth:
+		print "Authorization Failed.\n";
+		sys.exit(1)
+	else:
+		print "Successfully logged in as account " + str(auth)
+		
+
+def list(type):
+	print "Aaargh Pirates! List Everything!"
+
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
