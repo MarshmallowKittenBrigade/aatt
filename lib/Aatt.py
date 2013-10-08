@@ -77,6 +77,32 @@ class Processor:
 			return value
 		c.close()
 
+	def set(self,attributeId,state):
+		c = self.db.cursor(MySQLdb.cursors.DictCursor)
+		sql = "INSERT INTO state (attribute_id,new) VALUES ('%d','%s') ON DUPLICATE KEY UPDATE set new='%s'" % (attributeId,state,state)
+		try:
+			c.execute(sql)
+		except:
+			self.db.rollback()
+			c.close()
+			return False
+		self.db.commit()
+		c.close()
+		return True
+
+	def update(self,attributeId,state):
+		c = self.db.cursor(MySQLdb.cursors.DictCursor)
+		sql = "INSERT INTO state (attribute_id,current) VALUES ('%d','%s') ON DUPLICATE KEY UPDATE set current='%s'" % (attributeId,state,state)
+		try:
+			c.execute(sql)
+		except:
+			self.db.rollback()
+			c.close()
+			return False
+		self.db.commit()
+		c.close()
+		return True
+
 	def process(self):
 		self.parse()
 		foo = Auth(self.auth)
