@@ -115,26 +115,33 @@ class Processor:
 		self.parse()
 		foo = Auth(self.auth)
 		if foo.login():
+			self.checker.getAssets(foo.getId())
 			rowcount = 0
 			self.aattlog.log("ACT: %s" % self.act)
 			if self.act == "RECORD":
 				self.records = self.data["RECORDS"]
 				for endpoint in self.records:
-					self.record(self.device,endpoint,self.records[endpoint])
-					rowcount += 1
+					if self.checker.validEndpoint(endpoint):
+						self.record(self.device,endpoint,self.records[endpoint])
+						rowcount += 1
+					else:
+						self.aattlog.log("ERROR: BAD RECORD - ENDPOINT %s NOT ON ACCT" % (endpoint))
 				self.response = {"STATUS":"SUCCESS","RESPONSE":{"RECORDED":rowcount}}
-				self.aattlog.log("INFO: Successfull recorded %d items" % (rowcount))
+				self.aattlog.log("INFO: Successfully recorded %d items" % (rowcount))
 			elif self.act == "CHECK":
 				state = {}
 				self.checks = self.data["CHECKS"]
 				for endpoint in self.checks:
-					state[endpoint] = {}
-					for attribute in endpoint:
-						checkResult = self.check(attribute)
-						if checkResult:
-							state[endpoint][attribute] = checkResult
-						else:
-							state[endpoint][attribute] = "ATTNOTEXIST"
+					if self.checker.validEndpoint(endpoint):
+						state[endpoint] = {}
+						for attribute in endpoint:
+							if self.checker.validAttribute(attribute):
+								checkResult = self.check(attribute)
+								if checkResult:
+									state[endpoint][attribute] = checkResult
+								else:
+									state[endpoint][attribute] = "ATTNOTEXIST"
+					self.aattlog.log("ERROR: BAD CHECK - ENDPOINT %s NOT ON ACCT" % (endpoint))
 				if not state:
 					self.response = {"STATUS":"FAIL","RESPONSE":"EPNOTEXIST"}
 					self.aattlog.log("WARNING: Endpoint does not exist")
@@ -167,6 +174,7 @@ class Auth:
 		self.app = ""
 		self.account = ""
 		self.key = ""
+		self.id = ""
 
 		try:
 			self.app		= auth['APP']
@@ -187,46 +195,69 @@ class Auth:
 
 		pw = hashlib.md5(self.key + "phoolsalt").hexdigest()
 		c = self.db.cursor(MySQLdb.cursors.DictCursor)
-		sql = "SELECT COUNT(*) as foo FROM account WHERE account_code='%s' AND account_key='%s'" % (self.account,pw)
+		sql = "SELECT * FROM account WHERE account_code='%s' AND account_key='%s'" % (self.account,pw)
 		try:
 			c.execute(sql)
 			accts = c.fetchone()
+			self.id = accts['id']
 			c.close()
 		except Exception as e:
 			self.aattlog.log("WARNING: Authentication query failed.")
 			return False
-		if(int(accts['foo']) > 0):
+		if(int(self.id)):
 			self.aattlog.log("INFO: Login Sucessful")
 			return True
 		else:
 			return False
+
+	def getId(self):
+		return self.id
 
 
 class Validator:
 
 	def __init__(self,json):
 		self.json = json
+		self.assets = {}
+		self.assets['devices'] = []
+		self.assets['endpoints'] = []
+		self.assets['attributes'] = []
+
+		config = System.Config('/opt/aatt/etc/config.ini')
+		cfg = config.getConfig()
+		self.aattlog = System.Log(cfg['syslogHost'],cfg['syslogFacility'],cfg['syslogName'])
+		self.db = MySQLdb.connect(host=cfg['dbhost'],user=cfg['dbuser'],passwd=cfg['dbpass'],db=cfg['dbname'])
 
 	def validJson(self):
 		try:
 			json.loads(self.json)
 			return True
-		except:
+		except Exception, e:
 			return False
 
-	def jsonValidKey(self,key):
-		keys = ["AUTH","ACT","DATA","ACCOUNT","KEY","APP","RECORDS","CHECKS","SET"]
-		if key in keys:
-			return True
-		else:
-			return False
+	def validDevice(self,deviceId):
+		return deviceId in self.assets['devices']
 
-	def validate(self):
+	def validEndpoint(self,endpointId):
+		return endpointId in self.assets['endpoints']
+
+	def validAttribute(self,attributeId):
+		return attributeId in self.assets['attributes']
+
+	def getAssets(self,id):
+		sql = "select d.id as device, ep.id as endpoint, a.id as attribute from device d left join endpoint ep on (d.id=device_id) left join attribute a on (ep.id=a.endpoint_id) where account_id=%s" % (id)
+		c = self.db.cursor(MySQLdb.cursors.DictCursor)
 		try:
-			self.json()
-		except:
-			return e
+			c.execute(sql)
+		except Exception, e:
+			self.aattlog.log("ERROR: %s" % (e))
 
-	def ownership(self,item,type):
-		blah = blah
-		
+		rows = c.fetchall()
+		for row in rows:
+			self.assets['devices'].append(row['device'])
+			self.assets['endpoints'].append(row['endpoint'])
+			self.assets['attributes'].append(row['attribute'])
+
+		#self.aattlog.log("DEVICES: " + str(self.assets['devices']).strip('[]'))
+		#self.aattlog.log("ENPOINTS: " + str(self.assets['endpoints']).strip('[]'))
+		#self.aattlog.log("ATTRIBUTES: " + str(self.assets['attributes']).strip('[]'))
