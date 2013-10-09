@@ -6,13 +6,15 @@ from lib import System
 class Processor:
 
 	def __init__(self,sent):
-		self.raw = {}
+		self.raw = json.loads(sent)
 		self.data = {}
 		self.auth = {}
 		self.response = {}
 		self.act = ""
 		self.records = {}
 		self.checks = {}
+		self.changes = {}
+		self.updates = {}
 
 		config = System.Config('/opt/aatt/etc/config.ini')
 		cfg = config.getConfig()
@@ -22,7 +24,7 @@ class Processor:
 		self.db = MySQLdb.connect(host=cfg['dbhost'],user=cfg['dbuser'],passwd=cfg['dbpass'],db=cfg['dbname'])
 		self.checker = Validator(sent)
 		try:
-			self.checker.validate()
+			self.checker.validJson()
 		except:
 			self.response["STATUS"] = "FAIL"
 			self.response["RESPONSE"] = "BADJSON"
@@ -50,21 +52,21 @@ class Processor:
 				self.data	= self.raw["DATA"]
 				self.device	= self.raw["DATA"]["DEVICE"]
 				self.auth	= self.raw["AUTH"]
-			except:
+			except Exception as e:
 				self.response["STATUS"] = "FAIL"
 				self.response["RESPONSE"] = "KEYNOTEXIST"
 				self.aattlog.log("WARNING: STATUS %s RESPONSE %s" % (self.response["STATUS"],self.response["RESPONSE"]))
 	
 	def record(self,deviceId,endpointId,value):
 		c = self.db.cursor(MySQLdb.cursors.DictCursor)
-		sql = "INSERT INTO endpoint_data (device_id,endpoint_id,value) VALUES('"+deviceId+"','"+endpointId+"','"+value+"')"
+		sql = "INSERT INTO endpoint_data (device_id,endpoint_id,value) VALUES(%s,%s,%s)" % (deviceId,endpointId,value)
 		try:
 			c.execute(sql)
-			self.aattlog.log("INFO: Added data for endpoint %i" % (endpointId))
-		except:
+			self.aattlog.log("INFO: Added data for endpoint %s" % (endpointId))
+		except Exception, e:
+			self.aattlog.log("ERROR: %s " % (e))
 			self.db.rollback()
 			c.close()
-			self.aattlog.log("ERROR: %s" % (e))
 			return False
 		self.db.commit()
 		c.close()
@@ -72,7 +74,7 @@ class Processor:
 
 	def check(self,attributeId):
 		c = self.db.cursor(MySQLdb.cursors.DictCursor)
-		sql = "SELECT new FROM state WHERE attribute_id='%s'" %(attributeId)
+		sql = "SELECT new FROM state WHERE attribute_id=%s" %(attributeId)
 		c.execute(sql)
 		results = c.fetchall()
 		for value in results:
@@ -81,14 +83,14 @@ class Processor:
 
 	def set(self,attributeId,state):
 		c = self.db.cursor(MySQLdb.cursors.DictCursor)
-		sql = "INSERT INTO state (attribute_id,new) VALUES ('%d','%s') ON DUPLICATE KEY UPDATE set new='%s'" % (attributeId,state,state)
+		sql = "INSERT INTO state (attribute_id,new) VALUES (%s,%s) ON DUPLICATE KEY UPDATE new=%s" % (attributeId,state,state)
 		try:
 			c.execute(sql)
-			self.aattlog.log("INFO: Added new state request for attribute %i" % (attributeId))
-		except:
+			self.aattlog.log("INFO: Added new state request for attribute %s" % (attributeId))
+		except Exception, e:
+			self.aattlog.log("ERROR: %s " % (e))
 			self.db.rollback()
 			c.close()
-			self.aattlog.log("ERROR: %s" % (e))
 			return False
 		self.db.commit()
 		c.close()
@@ -96,14 +98,14 @@ class Processor:
 
 	def update(self,attributeId,state):
 		c = self.db.cursor(MySQLdb.cursors.DictCursor)
-		sql = "INSERT INTO state (attribute_id,current) VALUES ('%d','%s') ON DUPLICATE KEY UPDATE set current='%s'" % (attributeId,state,state)
+		sql = "INSERT INTO state (attribute_id,current) VALUES (%s,%s) ON DUPLICATE KEY UPDATE current=%s" % (attributeId,state,state)
 		try:
 			c.execute(sql)
-			self.aattlog.log("INFO: Updated current state for attribute %i" % (attributeId))
-		except:
+			self.aattlog.log("INFO: Updated current state for attribute %s" % (attributeId))
+		except Exception, e:
+			self.aattlog.log("ERROR: %s " % (e))
 			self.db.rollback()
 			c.close()
-			self.aattlog.log("ERROR: %s" % (e))
 			return False
 		self.db.commit()
 		c.close()
@@ -112,7 +114,7 @@ class Processor:
 	def process(self):
 		self.parse()
 		foo = Auth(self.auth)
-		if(foo.login() == True):
+		if foo.login():
 			rowcount = 0
 			self.aattlog.log("ACT: %s" % self.act)
 			if self.act == "RECORD":
@@ -121,6 +123,7 @@ class Processor:
 					self.record(self.device,endpoint,self.records[endpoint])
 					rowcount += 1
 				self.response = {"STATUS":"SUCCESS","RESPONSE":{"RECORDED":rowcount}}
+				self.aattlog.log("INFO: Successfull recorded %d items" % (rowcount))
 			elif self.act == "CHECK":
 				state = {}
 				self.checks = self.data["CHECKS"]
@@ -138,7 +141,22 @@ class Processor:
 				else:
 					self.response = {"STATUS":"SUCCESS","RESPONSE":state}
 					self.aattlog.log("INFO: Successfully returned results of check")
-		elif(foo.login() == False):
+			elif self.act == "SET":
+				self.changes = self.data["CHANGES"]
+				for attribute in self.changes:
+					self.set(attribute,self.changes[attribute])
+					rowcount += 1
+				self.response = {"STATUS":"SUCCESS","RESPONSE":{"SET":rowcount}}
+				self.aattlog.log("INFO: Successfull set %d items" % (rowcount))
+			elif self.act == "UPDATE":
+				self.updates = self.data["UPDATES"]
+				for attribute in self.updates:
+					self.update(attribute,self.updates[attribute])
+					rowcount += 1
+				self.response = {"STATUS":"SUCCESS","RESPONSE":{"UPDATED":rowcount}}
+				self.aattlog.log("INFO: Successfull updated %d items" % (rowcount))
+
+		elif not foo.login():
 			self.response = {"STATUS":"FAIL","RESPONSE":"AUTHFAIL"}
 		return json.dumps(self.response)
 
@@ -154,7 +172,7 @@ class Auth:
 			self.app		= auth['APP']
 			self.account	= auth['ACCOUNT']
 			self.key		= auth['KEY']
-		except:
+		except Exception as e:
 			self.response['STATUS'] = 'FAIL'
 			self.response['RESPONSE'] = 'NOAUTH'
 
@@ -174,8 +192,8 @@ class Auth:
 			c.execute(sql)
 			accts = c.fetchone()
 			c.close()
-		except:
-			self.aattlog.log("WARNING: Authentication query failed: ")
+		except Exception as e:
+			self.aattlog.log("WARNING: Authentication query failed.")
 			return False
 		if(int(accts['foo']) > 0):
 			self.aattlog.log("INFO: Login Sucessful")
@@ -183,12 +201,13 @@ class Auth:
 		else:
 			return False
 
+
 class Validator:
 
 	def __init__(self,json):
 		self.json = json
 
-	def json(self):
+	def validJson(self):
 		try:
 			json.loads(self.json)
 			return True
@@ -208,10 +227,6 @@ class Validator:
 		except:
 			return e
 
-		#try:
-		#	for key in self.json:
-		#		if not self.jsonValidKey(key):
-		#			return False
-
-
-
+	def ownership(self,item,type):
+		blah = blah
+		
